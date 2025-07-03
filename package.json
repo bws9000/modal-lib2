@@ -1,6 +1,6 @@
 {
   "name": "modal-lib2",
-  "version": "0.0.22",
+  "version": "0.0.23",
   "description": "Standalone Angular Modal System",
   "author": "Burt Snyder",
   "license": "MIT",
@@ -10,6 +10,14 @@
     "library",
     "standalone"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/burtsnyder/modal-lib2.git"
+  },
+  "bugs": {
+    "url": "https://github.com/burtsnyder/modal-lib2/issues"
+  },
+  "homepage": "https://github.com/burtsnyder/modal-lib2#readme",
   "peerDependencies": {
     "@angular/core": "^17.0.0 || ^18.0.0 || ^19.0.0",
     "@angular/common": "^17.0.0 || ^18.0.0 || ^19.0.0"
