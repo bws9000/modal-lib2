@@ -1,0 +1,8 @@
+<div [hidden]="!isBackdropEnabled" class="modal-backdrop"></div>
+<div class="modal">
+  <div class="modal-dialog modal-dialog-centered" [@flyInOut] (@flyInOut.done)="onAnimationDone()">
+    <div class="modal-content">
+      <ng-template dialogHost></ng-template>
+    </div>
+  </div>
+</div>

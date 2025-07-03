@@ -1,0 +1,31 @@
+{
+  "name": "modal-lib2",
+  "version": "0.0.22",
+  "description": "Standalone Angular Modal System",
+  "author": "Burt Snyder",
+  "license": "MIT",
+  "keywords": [
+    "angular",
+    "modal",
+    "library",
+    "standalone"
+  ],
+  "peerDependencies": {
+    "@angular/core": "^17.0.0 || ^18.0.0 || ^19.0.0",
+    "@angular/common": "^17.0.0 || ^18.0.0 || ^19.0.0"
+  },
+  "main": "dist/fesm2022/modal-lib2.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "npx ng-packagr -p ng-package.json",
+    "prepublishOnly": "npm run build"
+  },
+  "sideEffects": false,
+  "dependencies": {
+    "tslib": "^2.3.0"
+  }
+}
