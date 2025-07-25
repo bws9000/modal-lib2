@@ -8,6 +8,12 @@ import { ModalHostDirective } from '../modal-host.directive';
   `
 })
 export class HostContainerComponent {
+  // Binds to the modalHost directive instance, which exposes a ViewContainerRef
+  // used for injecting modal components at runtime.
   @ViewChild(ModalHostDirective, { static: true }) modalHost!: ModalHostDirective;
-  modalHostView: ViewContainerRef | undefined;
+
+  // Reference to the ViewContainerRef from the modalHost directive.
+  //  this is used during runtime to dynamically create modal components.
+  modalHostView!: ViewContainerRef;
 }
+
