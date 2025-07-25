@@ -1,7 +1,14 @@
-<div [hidden]="!isBackdropEnabled" class="modal-backdrop"></div>
-<div class="modal">
-  <div class="modal-dialog modal-dialog-centered" [@flyInOut] (@flyInOut.done)="onAnimationDone()">
-    <div class="modal-content">
+<!-- 
+  Modal layout structure:
+  - Backdrop is conditionally shown based on `isBackdropEnabled`
+  - Modal container animates in using `flyInOut`
+  - <ng-template> is the anchor for dynamically loading modal content 
+-->
+<div [hidden]="!isBackdropEnabled" class="modal-lib2-modal-backdrop"></div>
+<div class="modal-lib2-modal">
+  <div class="modal-lib2-modal-dialog" [@flyInOut] (@flyInOut.done)="onAnimationDone()">
+    <div class="modal-lib2-modal-content">
+      <!-- Dynamic component will be loaded into this host -->
       <ng-template dialogHost></ng-template>
     </div>
   </div>

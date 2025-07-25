@@ -1,4 +1,4 @@
-.modal-backdrop {
+.modal-lib2-modal-backdrop {
   position: fixed;
   top: 0;
   left: 0;
@@ -8,7 +8,7 @@
   z-index: 1040;
 }
 
-.modal {
+.modal-lib2-modal {
   position: fixed;
   top: 0;
   left: 0;
@@ -20,19 +20,14 @@
   justify-content: center;
 }
 
-.modal-dialog {
+.modal-lib2-modal-dialog {
   display: flex;
   flex-direction: column;
   align-items: center;
   border-radius: 5px;
 }
 
-.modal-content {
+.modal-lib2-modal-content {
   border: 0;
-  padding: 1rem;
-}
-
-.modal-body {
-  max-height: 200px;
-  overflow-y: auto;
+  padding: 0;
 }

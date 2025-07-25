@@ -1,21 +1,21 @@
-import { ComponentRef, Injectable, ViewContainerRef } from "@angular/core";
+import { ComponentRef, Injectable, Type, ViewContainerRef } from "@angular/core";
 import { NavigationEnd, Router } from "@angular/router";
 import { ModalContainerComponent } from "./modal-container/modal-container.component";
 
 interface IModal {
-  data: any;
-  popupComponent: any;
+  data: Record<string, unknown>;
+  popupComponent: Type<unknown>;
   isBackdropEnabled?: boolean;
 }
 
 @Injectable({
   providedIn: 'root'
 })
-export class ModalServiceService {
-  public modalHost: ViewContainerRef | undefined;
-  public activeModal: ComponentRef<ModalContainerComponent> | undefined;
-  public data: any;
-  private popup: any;
+export class ModalLib2Service {
+  private modalHost: ViewContainerRef | undefined;
+  private activeModal: ComponentRef<ModalContainerComponent> | undefined;
+  private data: Record<string, unknown> = {};
+  private popup!: Type<unknown>;
 
   constructor(private router: Router) {
     this.router.events.subscribe((event) => {
@@ -29,7 +29,7 @@ export class ModalServiceService {
     this.modalHost = modalHost;
   }
 
-  private async setContainerHost(modal: IModal) {
+  private setContainerHost(modal: IModal) {
     this.modalHost?.clear();
     this.activeModal = this.modalHost?.createComponent(ModalContainerComponent);
     if (this.activeModal) {
@@ -37,22 +37,26 @@ export class ModalServiceService {
     }
   }
 
+  /**
+   * Opens a modal with the specified component and data.
+   */
   open(modal: IModal): Promise<{ child: any, container: ModalContainerComponent }> {
     const data = modal.data ?? {};
 
+    // Minimal security validation
     if ('title' in data) {
-      if (typeof data.title !== 'string' || data.title.length > 1000) {
-        throw new Error('invalid or too long modal title!');
+      if (typeof data['title'] !== 'string' || data['title'].length > 1000) {
+        throw new Error('Invalid or too long modal title!');
       }
     }
 
     if ('message' in data) {
-      if (typeof data.message !== 'string' || data.message.length > 10000) {
+      if (typeof data['message'] !== 'string' || data['message'].length > 10000) {
         throw new Error('Invalid or too long  modal message');
       }
 
-      if (/<script|onerror|onload/i.test(data.message)) {
-        throw new Error('unsafe HTML content in modal message');
+      if (/<script|onerror|onload/i.test(data['message'])) {
+        throw new Error('Unsafe HTML content in modal message');
       }
     }
 
@@ -67,7 +71,7 @@ export class ModalServiceService {
         const childInstance = containerInstance.getLoadedComponentInstance();
         resolve({ child: childInstance, container: containerInstance });
       } else {
-        reject(new Error("modal-lib2 instance not created."));
+        reject(new Error("Modal-lib2 instance not created."));
       }
     });
   }
@@ -76,7 +80,7 @@ export class ModalServiceService {
     return this.activeModal?.instance;
   }
 
-  public close(result?: any): void {
+  close(result?: any): void {
     if (result !== undefined && this.activeModal?.instance?.onClose) {
       this.activeModal.instance.onClose(result);
     }
