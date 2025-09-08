@@ -1,19 +1,16 @@
 # modal-lib2
 
-Lightweight, standalone Angular modal system built for Angular 17+. This library provides a dynamic, service-based modal mechanism designed for use in modern Angular standalone applications.
+Lightweight, standalone Angular SSR-Safe modal system for Angular 17+.
+A service-based API to open any standalone component as a modal.
 
 ✨ Features
 - Angular 17+ standalone component support
-- Service-driven API for opening modals
-- Load any component as modal content
-- Pass data to modal components via @Input()
-- Optional backdrop
-- onClose callback for data transfer
-- Programmatic close support (manual or timed)
-- Basic input sanitization
-- Supports Angular animations (@flyInOut)
-- Emits animationDone for post-animation logic
-- Advanced API returns modal container + child component references
+- Simple ModalService.open() API
+- Pass data into modal components via @Input()
+- Strongly typed result via ModalRef.afterClosed
+- Optional backdrop (opts.backdrop)
+- Programmatic close support
+- SSR-safe: queues on server, flushes on client
 
 ## Installation
 
@@ -21,129 +18,110 @@ Lightweight, standalone Angular modal system built for Angular 17+. This library
 npm install modal-lib2
 ```
 
-## Setup
-
-To enable Angular animations (required for modal transitions), add `provideAnimations()` to your `bootstrapApplication` call in `main.ts`:
-
-```ts
-import { provideAnimations } from '@angular/platform-browser/animations';
-
-bootstrapApplication(AppComponent, {
-  providers: [provideAnimations()]
-});
-```
-
-If you prefer to disable animations (but still avoid runtime errors), you can use `provideNoopAnimations()` instead:
-
-```ts
-import { provideNoopAnimations } from '@angular/platform-browser/animations';
-
-bootstrapApplication(AppComponent, {
-  providers: [provideNoopAnimations()]
-});
-```
-
 ---
 
 ## Quick Example
+### Modal Content Component
 
 ```ts
-import { Component, inject } from '@angular/core';
-import { ModalLib2Service } from 'modal-lib2';
+import { Component, inject, Input } from '@angular/core';
+import { ModalRef } from 'modal-lib2';
+
+export interface LoginResult {
+  success: boolean;
+  token?: string;
+}
 
 @Component({
-  selector: 'app-test-modal-content',
+  selector: 'app-login-modal',
   standalone: true,
   template: `
-    <div class="modal-body">
-      <h3>Test Modal</h3>
-      <p>This came from modal-lib2!</p>
-      <button (click)="close()">Close</button>
-    </div>
+    <h3>Login</h3>
+    <p>Hello, {{username}}</p>
+    <button (click)="ok()">OK</button>
+    <button (click)="cancel()">Cancel</button>
   `,
 })
-export class TestModalContentComponent {
-  private modalService = inject(ModalLib2Service);
+export class LoginModalComponent {
+  @Input() username = '';
+  private modalRef = inject<ModalRef<LoginResult>>(ModalRef);
 
-  close() {
-    this.modalService.close({ success: true });
+  ok() {
+    this.modalRef.close({ success: true, token: '123' });
+  }
+
+  cancel() {
+    this.modalRef.close({ success: false });
   }
 }
 ```
 
-### Register Modal Host (in AppComponent)
+## Open From Anywhere
 
 ```ts
-import { Component, ViewContainerRef, inject } from '@angular/core';
-import { ModalLib2Service } from 'modal-lib2';
+import { Component, inject } from '@angular/core';
+import { ModalService } from 'modal-lib2';
+import { LoginModalComponent, LoginResult } from './login-modal.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  template: `<router-outlet />`,
+  template: `<button (click)="open()">Open Login</button>`,
 })
 export class AppComponent {
-  private viewContainerRef = inject(ViewContainerRef);
-  private modalService = inject(ModalLib2Service);
+  private modal = inject(ModalService);
 
-  constructor() {
-    this.modalService.setModalHost(this.viewContainerRef);
-  }
-}
-```
+  open() {
+    const { ref, instance } = this.modal.open<LoginModalComponent, LoginResult>(
+      LoginModalComponent,
+      { username: 'Burt' },
+      { backdrop: true }
+    );
 
-### Open the Modal Anywhere
-```ts
-import { Component, inject } from '@angular/core';
-import { ModalLib2Service } from 'modal-lib2';
-import { TestModalContentComponent } from './test-modal-content.component';
-
-@Component({
-  selector: 'app-main',
-  standalone: true,
-  template: `<button (click)="openModal()">Open Modal</button>`,
-})
-export class MainComponent {
-  private modalService = inject(ModalLib2Service);
-
-  openModal() {
-    this.modalService.open({
-      popupComponent: TestModalContentComponent,
-      data: { title: 'Modal Title' },
-      isBackdropEnabled: true
-    }).then(({ container, child }) => {
-      if (child) {
-        child.onClose = (result: any) => {
-          console.log('Closed with:', result);
-        };
-      }
-
-      container?.animationDone.subscribe(() => {
-        console.log('Animation complete.');
-      });
-
-      //  auto-close example:
-      setTimeout(() => {
-        container?.closeWithData({ success: true });
-      }, 5000);
+    ref.afterClosed.subscribe(result => {
+      console.log('Closed with:', result);
     });
+
+    console.log('Modal instance', instance);
   }
 }
 ```
 
-### Notes
+## API
 
-- popupComponent must be a standalone component.
-- data passed via data: { ... } binds to @Input()s.
-- close() and closeWithData() support manual modal control.
-- Advanced control provided via .then(({ container, child }) => ...).
+### ModalService.open<T, TResult>(component, data?, opts?)
+- component – standalone component to render inside modal
+- data – partial object assigned to component’s @Input()s
+- opts – { backdrop?: boolean } (default: true)
 
-### Changelog Highlights (0.1.24)
+Returns:
+```ts
+{
+  ref: ModalRef<TResult>,
+  instance: T | undefined,
+  close: () => void
+}
+```
 
-- Renamed ModalServiceService → ModalLib2Service
-- Fixed test coverage for Object.assign(...) based dynamic binding
-- Improved injection and animation setup
-- Tests now support shallow rendering of modal content
+### ModalRef<TResult>
+- afterClosed: Observable<TResult | undefined>
+- close(result?: TResult): void
+
+## SSR NOTES
+- On the server, open() queues the request without touching the DOM.
+- On the client, it flushes once Angular is stable.
+- If you call close() on the server before hydration, nothing is rendered.
+
+## Changelog Highlights (1.0.0)
+- New API: ModalService.open<T, TResult>()
+- Strongly typed ModalRef<TResult>.afterClosed
+- Removed host requirement (setModalHost)
+- Optional backdrop (opts.backdrop)
+- SSR-safe queuing
+
+
+
+
 
 
 
