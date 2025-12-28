@@ -7,25 +7,44 @@ import {
     inject,
     PLATFORM_ID,
     Injector,
+    signal,
+    EffectRef,
+    effect,
+    runInInjectionContext,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { filter, take } from 'rxjs/operators';
 import { Ml2ContainerComponent } from './public-api';
 import { ModalRef } from './modal-ref';
 
+export type ModalOptions = {
+    backdrop?: boolean;
+    closeOnEsc?: boolean;
+    lockScroll?: boolean;
+};
+
 type PendingOpen = {
     component: Type<any>;
     data?: any;
     ref: ModalRef<any>;
-    opts?: { backdrop?: boolean }
+    opts?: ModalOptions;
 };
 
 @Injectable({ providedIn: 'root' })
 export class ModalService {
+    // private currentOpts: {
+    //     backdrop?: boolean;
+    //     closeOnEsc?: boolean;
+    //     lockScroll?: boolean;
+    // } | null = null;
+
+    private escListener?: (e: KeyboardEvent) => void;
+    private scrollLocked = false;
+    private backdropEffect: EffectRef | null = null;
     private overlayRootEl: HTMLElement | null = null;
     private containerRef: ReturnType<typeof createComponent<Ml2ContainerComponent>> | null = null;
     private childRef: any | null = null;
-
+    private readonly _isOpen = signal(false);
     private readonly platformId = inject(PLATFORM_ID);
     private get isBrowser() { return isPlatformBrowser(this.platformId); }
     private pending: PendingOpen | null = null;
@@ -51,10 +70,11 @@ export class ModalService {
     open<T, TResult = unknown>(
         component: Type<T>,
         data?: Partial<T>,
-        opts?: { backdrop?: boolean }
+        opts?: ModalOptions
     ): { ref: ModalRef<TResult>; instance: T | undefined; close: () => void } {
-
+        //this.currentOpts = opts ?? null;
         this.close();
+        this._isOpen.set(true);
 
         const ref = new ModalRef<TResult>(() => this.close());
 
@@ -71,7 +91,7 @@ export class ModalService {
         component: Type<T>,
         data: Partial<T> | undefined,
         ref: ModalRef<TResult>,
-        opts?: { backdrop?: boolean }
+        opts?: ModalOptions
     ): T {
         this.ensureOverlayRoot();
 
@@ -79,12 +99,42 @@ export class ModalService {
             environmentInjector: this.envInjector,
         });
 
-        const backdropOn = opts?.backdrop !== false;
-        if (this.containerRef.setInput) {
-            this.containerRef.setInput('showBackdrop', backdropOn);
-        } else {
-            this.containerRef.instance.showBackdrop = backdropOn;
+        // lock scroll
+        const lockScroll = opts?.lockScroll === true;
+
+        if (lockScroll && !this.scrollLocked) {
+            document.body.style.overflow = 'hidden';
+            this.scrollLocked = true;
         }
+
+        // close handling
+        this.detachEscListener();
+
+        const closeOnEsc = opts?.closeOnEsc !== false;
+        const closeOnBackdrop = opts?.backdrop !== false;
+
+        // container inputs
+        if (this.containerRef.setInput) {
+            this.containerRef.setInput('showBackdrop', closeOnBackdrop);
+        }
+
+        // single effect that respects options
+        this.backdropEffect?.destroy();
+        this.backdropEffect = runInInjectionContext(this.envInjector, () =>
+            effect(() => {
+                const inst = this.containerRef?.instance;
+                if (!inst) return;
+
+                if (closeOnBackdrop && inst.backdropClicked()) {
+                    this.close();
+                }
+
+                if (closeOnEsc && inst.escPressed()) {
+                    this.close();
+                }
+            })
+        );
+
 
         this.appRef.attachView(this.containerRef.hostView);
 
@@ -105,13 +155,30 @@ export class ModalService {
             injector,
         });
 
-        if (data) Object.assign(this.childRef.instance as object, data);
+        if (data) {
+            //signal-friendly
+            if ('data' in data && typeof (data as any).data === 'object') {
+                Object.assign(this.childRef.instance as object, (data as any).data);
+            } else {
+                //old
+                Object.assign(this.childRef.instance as object, data);
+            }
+        }
+
         this.childRef.changeDetectorRef.detectChanges();
         return this.childRef.instance as T;
     }
 
     close(): void {
-        if (this.childRef) { try { this.childRef.destroy(); } catch { } this.childRef = null; }
+        this.backdropEffect?.destroy();
+        this.backdropEffect = null;
+
+        const wasOpen = this._isOpen();
+        if (this.childRef) {
+            try { this.childRef.destroy(); } catch { }
+            this.childRef = null;
+        }
+
         if (this.containerRef) {
             try {
                 const el = this.containerRef.location.nativeElement as HTMLElement;
@@ -126,8 +193,28 @@ export class ModalService {
             this.overlayRootEl.parentElement?.removeChild(this.overlayRootEl);
             this.overlayRootEl = null;
         }
+
+        //cleanups
         this.pending = null;
+        if (wasOpen) {
+            this._isOpen.set(false);
+        }
+        if (this.scrollLocked) {
+            document.body.style.overflow = '';
+            this.scrollLocked = false;
+        }
+        //this.currentOpts = null;
+        this.detachEscListener();
+
     }
+
+    private detachEscListener() {
+        if (this.escListener) {
+            document.removeEventListener('keydown', this.escListener);
+            this.escListener = undefined;
+        }
+    }
+
 
     private ensureOverlayRoot(): void {
         if (this.overlayRootEl) return;
