@@ -1,14 +1,27 @@
-import { Component, ElementRef, EventEmitter, Input, Output, ViewChild, ViewContainerRef, ViewEncapsulation } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  ViewChild,
+  ViewContainerRef,
+  ViewEncapsulation,
+  signal,
+  input,
+  HostListener,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'ml2-container',
+  standalone: true,
+  imports: [CommonModule],
+  encapsulation: ViewEncapsulation.Emulated,
   template: `
     <div
-      *ngIf="showBackdrop"
+      *ngIf="showBackdrop()"
       class="ml2-overlay"
       (click)="onBackdrop()"
     ></div>
+
     <div class="ml2-panel" tabindex="-1" #panel>
       <ng-template #vc></ng-template>
     </div>
@@ -26,17 +39,28 @@ import { CommonModule } from '@angular/common';
       padding: 0;
     }
   `],
-  encapsulation: ViewEncapsulation.Emulated,
-  imports: [CommonModule],
-  standalone: true,
 })
 export class Ml2ContainerComponent {
-  @Input() showBackdrop = true;
-  @Output() backdropClick = new EventEmitter<void>();
-  onBackdrop() {
-    this.backdropClick.emit();
-  }
-  @ViewChild('vc', { read: ViewContainerRef, static: true }) vcTpl!: ViewContainerRef;
-  @ViewChild('panel', { static: true }) panel!: ElementRef<HTMLDivElement>;
+  showBackdrop = input(true);
+  private readonly _backdropClicked = signal(false);
+  readonly backdropClicked = this._backdropClicked.asReadonly();
 
+  private readonly _escPressed = signal(false);
+  readonly escPressed = this._escPressed.asReadonly();
+
+  @HostListener('document:keydown.escape')
+  onEsc() {
+    this._escPressed.set(true);
+  }
+
+  @ViewChild('vc', { read: ViewContainerRef, static: true })
+  vcTpl!: ViewContainerRef;
+
+  @ViewChild('panel', { static: true })
+  panel!: ElementRef<HTMLDivElement>;
+
+  onBackdrop() {
+    this._backdropClicked.set(true);
+  }
 }
+
