@@ -1,28 +1,40 @@
 # modal-lib2
 
-A lightweight, standalone, SSR-safe modal system for Angular 17+.  
-Provides a simple service-based API for rendering any standalone component as a modal.
+A lightweight, standalone, SSR-safe modal system for Angular 17+.
 
-Designed to be headless, predictable, and framework-aligned (Signals-friendly).
+`modal-lib2` provides a simple service-based API for rendering any standalone Angular component as a modal.
+
+Designed to be:
+- headless
+- predictable
+- Signals-friendly
+- Angular-aligned
+- SSR-safe
+
+---
+
+## Live Demo
+
+- Angular 21 StackBlitz Demo: https://stackblitz.com/edit/stackblitz-starters-hc7sjvnm?file=src%2Fmain.ts
 
 ---
 
 ## Features
 
 - Angular 17+ standalone component support
-- Fully tested
+- Angular 21 compatible
 - Simple `ModalService.open()` API
 - Pass data into modal components via `@Input()`
-- Signal-friendly data assignment (`{ data: ... }` supported)
+- Signal-friendly data assignment support
 - Strongly typed modal results via `ModalRef<TResult>`
-- Optional backdrop
+- Optional backdrop support
 - Optional ESC-to-close behavior
 - Optional body scroll locking
 - Programmatic close support
 - Idempotent cleanup (`close()` is safe to call multiple times)
-- SSR-safe:
-  - queues modal opens on the server
-  - flushes automatically on the client once stable
+- SSR-safe design
+- Avoids DOM access during server rendering
+- Headless by design (bring your own styles/UI)
 
 ---
 
@@ -32,8 +44,13 @@ Designed to be headless, predictable, and framework-aligned (Signals-friendly).
 npm install modal-lib2
 ```
 
+---
+
+# Basic Usage
+
 ## Modal Content Component
-```bash
+
+```ts
 import { Component, inject, Input } from '@angular/core';
 import { ModalRef } from 'modal-lib2';
 
@@ -47,6 +64,7 @@ export interface LoginResult {
   standalone: true,
   template: `
     <h3>Login</h3>
+
     <p>Hello, {{ username }}</p>
 
     <button (click)="ok()">OK</button>
@@ -54,39 +72,61 @@ export interface LoginResult {
   `,
 })
 export class LoginModalComponent {
+
   @Input() username = '';
 
-  private modalRef = inject<ModalRef<LoginResult>>(ModalRef);
+  private modalRef =
+    inject<ModalRef<LoginResult>>(ModalRef);
 
   ok() {
-    this.modalRef.close({ success: true, token: '123' });
+    this.modalRef.close({
+      success: true,
+      token: '123'
+    });
   }
 
   cancel() {
-    this.modalRef.close({ success: false });
+    this.modalRef.close({
+      success: false
+    });
   }
 }
 ```
 
+---
+
 ## Open Modal
-```bash
+
+```ts
 import { Component, inject } from '@angular/core';
 import { ModalService } from 'modal-lib2';
-import { LoginModalComponent, LoginResult } from './login-modal.component';
+
+import {
+  LoginModalComponent,
+  LoginResult
+} from './login-modal.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  template: `<button (click)="open()">Open Login</button>`,
+  template: `
+    <button (click)="open()">
+      Open Login
+    </button>
+  `,
 })
 export class AppComponent {
+
   private modal = inject(ModalService);
 
   open() {
+
     const { ref, instance } =
       this.modal.open<LoginModalComponent, LoginResult>(
         LoginModalComponent,
-        { username: 'Burt' },
+        {
+          username: 'Burt'
+        },
         {
           backdrop: true,
           closeOnEsc: true,
@@ -103,99 +143,160 @@ export class AppComponent {
 }
 ```
 
-## API
+---
 
-### ModalService.open\<T, TResult\>(component, data?, options?)
+# API
 
-#### Parameters
+## ModalService.open\<T, TResult\>()
 
-**component**  
-Standalone component to render inside the modal.
+```ts
+open<T, TResult>(
+  component: Type<T>,
+  data?: Partial<T>,
+  options?: ModalOptions
+)
+```
 
 ---
 
-**data**  
+## Parameters
+
+### `component`
+
+Standalone Angular component to render inside the modal.
+
+---
+
+### `data`
+
 Partial object assigned to the component instance.
 
-Supports both styles:
+Supports standard assignment:
 
 ```ts
-{ username: 'burt' }
-```
-**signal friendly**
-```ts
-{ data: { stuff :{moreStuff:{hi:'there'}} } }
+{
+  username: 'burt'
+}
 ```
 
-**options***
+Supports signal-friendly nested structures:
+
+```ts
+{
+  data: {
+    stuff: {
+      moreStuff: {
+        hi: 'there'
+      }
+    }
+  }
+}
+```
+
+---
+
+### `options`
+
 ```ts
 export type ModalOptions = {
-  backdrop?: boolean;   // default: true
-  closeOnEsc?: boolean; // default: true
-  lockScroll?: boolean; // default: false
+  backdrop?: boolean;
+  closeOnEsc?: boolean;
+  lockScroll?: boolean;
 };
 ```
-**retrun value**
+
+| Option | Default |
+|---|---|
+| backdrop | `true` |
+| closeOnEsc | `true` |
+| lockScroll | `false` |
+
+---
+
+## Return Value
+
 ```ts
 {
   ref: ModalRef<TResult>;
   instance: T | undefined;
   close: () => void;
 }
-
-- instance is undefined when called on the server
-- close() is always safe to call
 ```
 
-## Modal T ref ##
+### Notes
+
+- `instance` is `undefined` during SSR/server rendering
+- `close()` is always safe to call
+
+---
+
+# ModalRef
+
 ```ts
 class ModalRef<TResult> {
-  afterClosed: Observable<TResult | undefined>;
+
+  afterClosed:
+    Observable<TResult | undefined>;
+
   close(result?: TResult): void;
 }
-**note**
-- afterClosed emits once and then completes
-- close() is idempotent
-- Calling close() multiple times has no additional effect
 ```
 
-## SSR Behavior
+### Notes
 
-### On the server
-
-- `open()` queues the modal request
-- No DOM access occurs
-
-### On the client
-
-- Queued modals render automatically once Angular becomes stable
-
-### If `close()` is called on the server before hydration
-
-- Nothing is rendered on the client
+- `afterClosed` emits once and completes
+- `close()` is idempotent
+- Calling `close()` multiple times has no additional effect
 
 ---
 
-## Design Notes
+# SSR Notes
 
-- Modal options are **non-sticky**  
-  Each `open()` call is evaluated independently.
+`modal-lib2` avoids direct DOM access during server rendering
+and is designed to work safely in Angular SSR environments.
 
-- Defaults are explicit and predictable:
-  - Scroll is not locked unless requested
-  - ESC closing is opt-in per modal
-
-- The library is intentionally **headless**:
-  - No styles, animations, or layout opinions imposed
+Modal rendering occurs only in browser environments.
 
 ---
 
-## Changelog Highlights (1.0.0)
+# Design Notes
 
-- Service-based modal API (`ModalService.open`)
+- Modal options are non-sticky
+- Each `open()` call is evaluated independently
+- Scroll locking is opt-in
+- ESC closing is configurable per modal
+- Layout/styling is intentionally left to consumers
+
+The library owns:
+- overlay lifecycle
+- centering
+- stacking
+- viewport behavior
+- cleanup
+- SSR safety
+
+Consumers own:
+- modal appearance
+- animations
+- themes
+- internal layout/UI
+
+---
+
+# Changelog Highlights
+
+## 1.1.0
+
+- Angular 21 compatibility
+- Improved modal container positioning/layering
+- Updated packaging/type definitions
+- Public StackBlitz demo added
+
+## 1.0.0
+
+- Service-based modal API
 - Strongly typed modal results
 - Signal-friendly data handling
 - ESC, backdrop, and scroll-lock options
-- Idempotent cleanup and leak-free lifecycle
-- Fully SSR-safe behavior
-
+- Idempotent cleanup behavior
+- SSR-safe design

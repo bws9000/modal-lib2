@@ -27,18 +27,35 @@ import { CommonModule } from '@angular/common';
     </div>
   `,
   styles: [`
-    :host { position: fixed; inset: 0; display: block; }
-    .ml2-overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(0,0,0,.5);
-    }
-    .ml2-panel {
-      background: transparent;
-      color: inherit;
-      padding: 0;
-    }
-  `],
+  :host {
+    position: fixed;
+    inset: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    z-index: 1050;
+  }
+
+  .ml2-overlay {
+    position: absolute;
+    inset: 0;
+
+    background: rgba(0,0,0,.5);
+  }
+
+  .ml2-panel {
+    position: relative;
+    z-index: 1;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    pointer-events: auto;
+  }
+`],
 })
 export class Ml2ContainerComponent {
   showBackdrop = input(true);

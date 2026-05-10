@@ -4,17 +4,15 @@ import {
     Injectable,
     Type,
     createComponent,
-    inject,
-    PLATFORM_ID,
     Injector,
     signal,
     EffectRef,
     effect,
-    runInInjectionContext,
+    runInInjectionContext
 } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
 import { filter, take } from 'rxjs/operators';
 import { Ml2ContainerComponent } from './public-api';
+//import { Ml2ContainerComponent } from './lib/container/ml2-container.component';
 import { ModalRef } from './modal-ref';
 
 export type ModalOptions = {
@@ -32,11 +30,6 @@ type PendingOpen = {
 
 @Injectable({ providedIn: 'root' })
 export class ModalService {
-    // private currentOpts: {
-    //     backdrop?: boolean;
-    //     closeOnEsc?: boolean;
-    //     lockScroll?: boolean;
-    // } | null = null;
 
     private escListener?: (e: KeyboardEvent) => void;
     private scrollLocked = false;
@@ -45,10 +38,9 @@ export class ModalService {
     private containerRef: ReturnType<typeof createComponent<Ml2ContainerComponent>> | null = null;
     private childRef: any | null = null;
     private readonly _isOpen = signal(false);
-    private readonly platformId = inject(PLATFORM_ID);
-    private get isBrowser() { return isPlatformBrowser(this.platformId); }
     private pending: PendingOpen | null = null;
     private flushedOnce = false;
+    isBrowser = typeof document !== 'undefined';
 
     constructor(
         private appRef: ApplicationRef,
@@ -72,7 +64,6 @@ export class ModalService {
         data?: Partial<T>,
         opts?: ModalOptions
     ): { ref: ModalRef<TResult>; instance: T | undefined; close: () => void } {
-        //this.currentOpts = opts ?? null;
         this.close();
         this._isOpen.set(true);
 
@@ -156,7 +147,7 @@ export class ModalService {
         });
 
         if (data) {
-            //signal-friendly
+            // signal-friendly
             if ('data' in data && typeof (data as any).data === 'object') {
                 Object.assign(this.childRef.instance as object, (data as any).data);
             } else {
@@ -194,7 +185,7 @@ export class ModalService {
             this.overlayRootEl = null;
         }
 
-        //cleanups
+        // cleanup
         this.pending = null;
         if (wasOpen) {
             this._isOpen.set(false);
@@ -203,7 +194,6 @@ export class ModalService {
             document.body.style.overflow = '';
             this.scrollLocked = false;
         }
-        //this.currentOpts = null;
         this.detachEscListener();
 
     }
