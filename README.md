@@ -13,6 +13,21 @@ Designed to be:
 
 ---
 
+## Why does this exist?
+
+`modal-lib2` was created for developers who want complete control over modal content and styling without adopting a heavily opinionated UI framework or dialog system.
+
+The philosophy is simple:
+
+- you own the modal UI
+- you own the styling
+- you own the component
+- the library handles the modal lifecycle safely and predictably
+
+`modal-lib2` intentionally stays small and headless rather than trying to become a complete design system.
+
+---
+
 ## Live Demo
 
 - Angular 21 StackBlitz Demo: https://stackblitz.com/edit/stackblitz-starters-hc7sjvnm?file=src%2Fmain.ts
